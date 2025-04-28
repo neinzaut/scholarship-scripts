@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV File Sorter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .file-upload {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .file-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .reference-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        .btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background-color: #27ae60;
+        }
+        .btn-secondary:hover {
+            background-color: #219653;
+        }
+        .btn-tertiary {
+            background-color: #9b59b6;
+        }
+        .btn-tertiary:hover {
+            background-color: #8e44ad;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .preview-container {
+            margin-top: 20px;
+            overflow-x: auto;
+            display: none;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            text-align: left;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .step {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px dashed #ccc;
+        }
+        .step:last-child {
+            border-bottom: none;
+        }
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+        }
+        .step-title {
+            font-size: 18px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        #displayArea {
+            margin-top: 20px;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            margin-bottom: -1px;
+            background-color: #f8f9fa;
+        }
+        .tab.active {
+            border-color: #ddd;
+            border-bottom-color: white;
+            background-color: white;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .preview-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .pagination {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .pagination button {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            background-color: white;
+            cursor: pointer;
+        }
+        .pagination button:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+        .file-input-button {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .file-name {
+            margin-left: 10px;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CSV File Sorter</h1>
+        
+        <div class="step">
+            <span class="step-number">1</span>
+            <span class="step-title">Reference Data</span>
+            <div class="file-group">
+                <label>Reference Data Source:</label>
+                <div class="reference-options">
+                    <div class="option">
+                        <input type="radio" id="useRepo" name="referenceSource" checked>
+                        <label for="useRepo">Use reference.csv from GitHub repository</label>
+                    </div>
+                    <div class="option">
+                        <input type="radio" id="useUpload" name="referenceSource">
+                        <label for="useUpload">Upload my own reference file</label>
+                    </div>
+                    <div id="uploadReferenceContainer" style="display: none; margin-top: 10px;">
+                        <div class="file-input-wrapper">
+                            <span class="file-input-button">Choose File</span>
+                            <input type="file" id="referenceFile" accept=".csv">
+                            <span id="referenceFileName" class="file-name">No file chosen</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="downloadTemplateBtn" class="btn btn-secondary">Download Template</button>
+                    <button id="viewReferenceBtn" class="btn">Preview Reference Data</button>
+                </div>
+                
+                <div id="referencePreview" class="preview-container">
+                    <h3>Reference Data Preview:</h3>
+                    <div class="preview-controls">
+                        <div class="pagination">
+                            <button id="refPrevPage" disabled>&lt; Previous</button>
+                            <span id="refPageInfo">Page 1 of 1</span>
+                            <button id="refNextPage">Next &gt;</button>
+                        </div>
+                        <div>
+                            <select id="refRowsPerPage">
+                                <option value="5">5 rows</option>
+                                <option value="10" selected>10 rows</option>
+                                <option value="25">25 rows</option>
+                                <option value="50">50 rows</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="referenceTablePreview"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <span class="step-number">2</span>
+            <span class="step-title">Upload File</span>
+            <div class="file-upload">
+                <div class="file-group">
+                    <label for="unsortedFile">Unsorted CSV:</label>
+                    <div class="file-input-wrapper">
+                        <span class="file-input-button">Choose File</span>
+                        <input type="file" id="unsortedFile" accept=".csv">
+                        <span id="unsortedFileName" class="file-name">No file chosen</span>
+                    </div>
+                    <small>This file should contain the data you want to sort</small>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="previewUnsortedBtn" class="btn btn-tertiary" disabled>Preview Uploaded File</button>
+                </div>
+                
+                <div id="unsortedPreview" class="preview-container">
+                    <h3>Uploaded File Preview:</h3>
+                    <div class="preview-controls">
+                        <div class="pagination">
+                            <button id="unsortedPrevPage" disabled>&lt; Previous</button>
+                            <span id="unsortedPageInfo">Page 1 of 1</span>
+                            <button id="unsortedNextPage">Next &gt;</button>
+                        </div>
+                        <div>
+                            <select id="unsortedRowsPerPage">
+                                <option value="5">5 rows</option>
+                                <option value="10" selected>10 rows</option>
+                                <option value="25">25 rows</option>
+                                <option value="50">50 rows</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="unsortedTablePreview"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <span class="step-number">3</span>
+            <span class="step-title">Process Files</span>
+            <p>Click the button below to process the files:</p>
+            <button id="processBtn" class="btn" disabled>Process Files</button>
+            <div id="alertContainer"></div>
+        </div>
+        
+        <div class="step">
+            <span class="step-number">4</span>
+            <span class="step-title">Preview and Download Result</span>
+            <div id="resultContainer" style="display: none;">
+                <p>Your data has been processed successfully. You can preview the results before downloading.</p>
+                
+                <div class="tabs">
+                    <div class="tab active" data-tab="preview">Preview</div>
+                    <div class="tab" data-tab="compare">Before/After Comparison</div>
+                </div>
+                
+                <div class="tab-content active" id="previewTab">
+                    <div class="preview-controls">
+                        <div class="pagination">
+                            <button id="resultPrevPage" disabled>&lt; Previous</button>
+                            <span id="resultPageInfo">Page 1 of 1</span>
+                            <button id="resultNextPage">Next &gt;</button>
+                        </div>
+                        <div>
+                            <select id="resultRowsPerPage">
+                                <option value="5">5 rows</option>
+                                <option value="10" selected>10 rows</option>
+                                <option value="25">25 rows</option>
+                                <option value="50">50 rows</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="tablePreview"></div>
+                </div>
+                
+                <div class="tab-content" id="compareTab">
+                    <div id="comparisonPreview">
+                        <p>This view shows how the data has changed after processing.</p>
+                        <div id="comparisonTablePreview"></div>
+                    </div>
+                </div>
+                
+                <div class="btn-group" style="margin-top: 20px;">
+                    <button id="downloadBtn" class="btn">Download Sorted CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables to store the data
+        let referenceData = null;
+        let unsortedData = null;
+        let processedData = null;
+        let currentSortField = null; // Add this variable
+        
+        // Pagination state
+        const paginationState = {
+            reference: { page: 1, rowsPerPage: 10, totalPages: 1 },
+            unsorted: { page: 1, rowsPerPage: 10, totalPages: 1 },
+            result: { page: 1, rowsPerPage: 10, totalPages: 1 }
+        };
+        
+        
+        // DOM Elements
+        const useRepoRadio = document.getElementById('useRepo');
+        const useUploadRadio = document.getElementById('useUpload');
+        const uploadReferenceContainer = document.getElementById('uploadReferenceContainer');
+        const referenceFileInput = document.getElementById('referenceFile');
+        const referenceFileName = document.getElementById('referenceFileName');
+        const unsortedFileInput = document.getElementById('unsortedFile');
+        const unsortedFileName = document.getElementById('unsortedFileName');
+        const processBtn = document.getElementById('processBtn');
+        const resultContainer = document.getElementById('resultContainer');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const tablePreview = document.getElementById('tablePreview');
+        const alertContainer = document.getElementById('alertContainer');
+        const downloadTemplateBtn = document.getElementById('downloadTemplateBtn');
+        const viewReferenceBtn = document.getElementById('viewReferenceBtn');
+        const referencePreview = document.getElementById('referencePreview');
+        const referenceTablePreview = document.getElementById('referenceTablePreview');
+        const previewUnsortedBtn = document.getElementById('previewUnsortedBtn');
+        const unsortedPreview = document.getElementById('unsortedPreview');
+        const unsortedTablePreview = document.getElementById('unsortedTablePreview');
+        const comparisonTablePreview = document.getElementById('comparisonTablePreview');
+        
+        // Pagination controls
+        const refPrevPage = document.getElementById('refPrevPage');
+        const refNextPage = document.getElementById('refNextPage');
+        const refPageInfo = document.getElementById('refPageInfo');
+        const refRowsPerPage = document.getElementById('refRowsPerPage');
+        const unsortedPrevPage = document.getElementById('unsortedPrevPage');
+        const unsortedNextPage = document.getElementById('unsortedNextPage');
+        const unsortedPageInfo = document.getElementById('unsortedPageInfo');
+        const unsortedRowsPerPage = document.getElementById('unsortedRowsPerPage');
+        const resultPrevPage = document.getElementById('resultPrevPage');
+        const resultNextPage = document.getElementById('resultNextPage');
+        const resultPageInfo = document.getElementById('resultPageInfo');
+        const resultRowsPerPage = document.getElementById('resultRowsPerPage');
+        
+        // Tabs
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        // GitHub repository reference file path
+        // Note: This should be updated to the actual path in your GitHub repository
+        const githubReferenceUrl = 'reference.csv';
+        
+        // Event Listeners
+        useRepoRadio.addEventListener('change', toggleReferenceSource);
+        useUploadRadio.addEventListener('change', toggleReferenceSource);
+        referenceFileInput.addEventListener('change', handleReferenceFileChange);
+        unsortedFileInput.addEventListener('change', handleUnsortedFileChange);
+        processBtn.addEventListener('click', processFiles);
+        downloadBtn.addEventListener('click', downloadSortedCSV);
+        downloadTemplateBtn.addEventListener('click', downloadTemplate);
+        viewReferenceBtn.addEventListener('click', previewReferenceData);
+        previewUnsortedBtn.addEventListener('click', previewUnsortedData);
+        
+        // Pagination event listeners
+        refPrevPage.addEventListener('click', () => navigatePage('reference', -1));
+        refNextPage.addEventListener('click', () => navigatePage('reference', 1));
+        refRowsPerPage.addEventListener('change', () => changeRowsPerPage('reference'));
+        unsortedPrevPage.addEventListener('click', () => navigatePage('unsorted', -1));
+        unsortedNextPage.addEventListener('click', () => navigatePage('unsorted', 1));
+        unsortedRowsPerPage.addEventListener('change', () => changeRowsPerPage('unsorted'));
+        resultPrevPage.addEventListener('click', () => navigatePage('result', -1));
+        resultNextPage.addEventListener('click', () => navigatePage('result', 1));
+        resultRowsPerPage.addEventListener('change', () => changeRowsPerPage('result'));
+        
+        // Tab event listeners
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+                
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Update active content
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(tabName + 'Tab').classList.add('active');
+                
+                // If comparison tab selected, render comparison view
+                if (tabName === 'compare' && unsortedData && processedData) {
+                    renderComparisonView();
+                }
+            });
+        });
+        
+        // Functions
+        function toggleReferenceSource() {
+            if (useRepoRadio.checked) {
+                uploadReferenceContainer.style.display = 'none';
+            } else {
+                uploadReferenceContainer.style.display = 'block';
+            }
+            checkInputs();
+        }
+        
+        function handleReferenceFileChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                referenceFileName.textContent = file.name;
+            } else {
+                referenceFileName.textContent = 'No file chosen';
+            }
+            checkInputs();
+        }
+        
+        function handleUnsortedFileChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                unsortedFileName.textContent = file.name;
+                previewUnsortedBtn.disabled = false;
+            } else {
+                unsortedFileName.textContent = 'No file chosen';
+                previewUnsortedBtn.disabled = true;
+            }
+            checkInputs();
+        }
+        
+        function checkInputs() {
+            if (useRepoRadio.checked) {
+                processBtn.disabled = !(unsortedFileInput.files.length > 0);
+            } else {
+                processBtn.disabled = !(referenceFileInput.files.length > 0 && unsortedFileInput.files.length > 0);
+            }
+        }
+        
+        function showAlert(message, type = 'error') {
+            alertContainer.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 5000);
+        }
+        
+        function showLoading(button) {
+            const originalText = button.textContent;
+            button.innerHTML = `<span class="loading"></span> Processing...`;
+            button.disabled = true;
+            return () => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            };
+        }
+        
+        function downloadTemplate() {
+            const resetLoading = showLoading(downloadTemplateBtn);
+            
+            fetch(githubTemplateUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Could not fetch template data from repository');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    
+                    const link = document.createElement('a');
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', 'reference_template.csv');
+                    link.style.visibility = 'hidden';
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    resetLoading();
+                })
+                .catch(error => {
+                    showAlert('Error downloading template: ' + error.message);
+                    resetLoading();
+                });
+        }
+        
+        function previewReferenceData() {
+            const resetLoading = showLoading(viewReferenceBtn);
+            
+            if (useRepoRadio.checked) {
+                // Fetch reference data from GitHub repository
+                fetch(githubReferenceUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Could not fetch reference data from repository');
+                        }
+                        return response.text();
+                    })
+                    .then(csv => {
+                        const results = Papa.parse(csv, { header: true });
+                        referenceData = results.data;
+                        resetPagination('reference', referenceData.length);
+                        displayPaginatedData('reference', referenceData, referenceTablePreview);
+                        referencePreview.style.display = 'block';
+                        resetLoading();
+                    })
+                    .catch(error => {
+                        showAlert(error.message);
+                        resetLoading();
+                    });
+            } else if (referenceFileInput.files.length > 0) {
+                // Parse uploaded reference file
+                Papa.parse(referenceFileInput.files[0], {
+                    header: true,
+                    complete: function(results) {
+                        if (results.errors.length > 0) {
+                            showAlert('Error parsing reference file: ' + results.errors[0].message);
+                            resetLoading();
+                            return;
+                        }
+                        
+                        referenceData = results.data;
+                        resetPagination('reference', referenceData.length);
+                        displayPaginatedData('reference', referenceData, referenceTablePreview);
+                        referencePreview.style.display = 'block';
+                        resetLoading();
+                    }
+                });
+            } else {
+                showAlert('Please select a reference file or use the repository data');
+                resetLoading();
+            }
+        }
+        
+        function previewUnsortedData() {
+            const resetLoading = showLoading(previewUnsortedBtn);
+            
+            if (!unsortedFileInput.files.length) {
+                showAlert('Please select an unsorted file first');
+                resetLoading();
+                return;
+            }
+            
+            Papa.parse(unsortedFileInput.files[0], {
+                header: true,
+                encoding: "UTF-8",
+                complete: function(results) {
+                    if (results.errors.length > 0) {
+                        showAlert('Error parsing unsorted file: ' + results.errors[0].message);
+                        resetLoading();
+                        return;
+                    }
+                    
+                    unsortedData = results.data;
+                    resetPagination('unsorted', unsortedData.length);
+                    displayPaginatedData('unsorted', unsortedData, unsortedTablePreview);
+                    unsortedPreview.style.display = 'block';
+                    resetLoading();
+                }
+            });
+        }
+        
+        function resetPagination(type, totalItems) {
+            const state = paginationState[type];
+            state.page = 1;
+            state.rowsPerPage = parseInt(document.getElementById(`${type}RowsPerPage`).value);
+            state.totalPages = Math.ceil(totalItems / state.rowsPerPage) || 1;
+            
+            updatePaginationControls(type);
+        }
+        
+        function updatePaginationControls(type) {
+            const state = paginationState[type];
+            const prevBtn = document.getElementById(`${type}PrevPage`);
+            const nextBtn = document.getElementById(`${type}NextPage`);
+            const pageInfo = document.getElementById(`${type}PageInfo`);
+            
+            prevBtn.disabled = state.page <= 1;
+            nextBtn.disabled = state.page >= state.totalPages;
+            pageInfo.textContent = `Page ${state.page} of ${state.totalPages}`;
+        }
+        
+        function navigatePage(type, direction) {
+            const state = paginationState[type];
+            
+            // Calculate new page, ensuring it's within bounds
+            const newPage = Math.max(1, Math.min(state.totalPages, state.page + direction));
+            
+            if (newPage !== state.page) {
+                state.page = newPage;
+                updatePaginationControls(type);
+                
+                // Display data for the new page
+                let data, container;
+                
+                if (type === 'reference') {
+                    data = referenceData;
+                    container = referenceTablePreview;
+                } else if (type === 'unsorted') {
+                    data = unsortedData;
+                    container = unsortedTablePreview;
+                } else if (type === 'result') {
+                    data = processedData;
+                    container = tablePreview;
+                }
+                
+                if (data) {
+                    displayPaginatedData(type, data, container);
+                }
+            }
+        }
+        
+        function changeRowsPerPage(type) {
+            const state = paginationState[type];
+            const rowsPerPageSelect = document.getElementById(`${type}RowsPerPage`);
+            
+            state.rowsPerPage = parseInt(rowsPerPageSelect.value);
+            state.totalPages = Math.ceil((type === 'reference' ? referenceData.length : 
+                                         type === 'unsorted' ? unsortedData.length : 
+                                         processedData.length) / state.rowsPerPage) || 1;
+            
+            // Reset to first page when changing rows per page
+            state.page = 1;
+            updatePaginationControls(type);
+            
+            // Display data with new pagination
+            let data, container;
+            
+            if (type === 'reference') {
+                data = referenceData;
+                container = referenceTablePreview;
+            } else if (type === 'unsorted') {
+                data = unsortedData;
+                container = unsortedTablePreview;
+            } else if (type === 'result') {
+                data = processedData;
+                container = tablePreview;
+            }
+            
+            if (data) {
+                displayPaginatedData(type, data, container);
+            }
+        }
+        
+        function displayPaginatedData(type, data, container) {
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p>No data to display</p>';
+                return;
+            }
+            
+            const state = paginationState[type];
+            const startIndex = (state.page - 1) * state.rowsPerPage;
+            const endIndex = Math.min(startIndex + state.rowsPerPage, data.length);
+            const pageData = data.slice(startIndex, endIndex);
+            
+            // Get headers from the first row
+            const headers = Object.keys(data[0]);
+            
+            // Create table
+            let tableHtml = '<table>';
+            
+            // Add header row
+            tableHtml += '<tr>';
+            headers.forEach(header => {
+                tableHtml += `<th>${header}</th>`;
+            });
+            tableHtml += '</tr>';
+            
+            // Add data rows
+            pageData.forEach(row => {
+                tableHtml += '<tr>';
+                headers.forEach(header => {
+                    tableHtml += `<td>${row[header] || ''}</td>`;
+                });
+                tableHtml += '</tr>';
+            });
+            
+            tableHtml += '</table>';
+            
+            container.innerHTML = tableHtml;
+        }
+        
+        function renderComparisonView() {
+    if (!unsortedData || !processedData) {
+        comparisonTablePreview.innerHTML = '<p>No data available for comparison</p>';
+        return;
+    }
+    
+    // Get a sample of rows for before/after comparison (first 5)
+    const sampleSize = 5;
+    const sampleData = unsortedData.slice(0, sampleSize);
+    
+    // Create mapping between unsorted and processed data to show the same records
+    const mappedProcessed = [];
+    for (const unsortedRow of sampleData) {
+        // Find the corresponding processed row
+        // This assumes there's a unique identifier or at least the same data structure
+        const matchingProcessedRow = processedData.find(row => {
+        // Match based on CYS and other fields that should be the same
+        return row.CYS === unsortedRow.CYS && 
+                row['NAME OF STUDENT'] === unsortedRow['NAME OF STUDENT'] && 
+                row.PROG === unsortedRow.PROG;
+        });
+        
+        if (matchingProcessedRow) {
+        mappedProcessed.push(matchingProcessedRow);
+        }
+    }
+    
+    // Get all headers from both datasets
+    const unsortedHeaders = Object.keys(unsortedData[0]);
+    const processedHeaders = Object.keys(processedData[0]);
+    
+    // Create comparison table HTML
+    let comparisonHTML = `
+        <div class="comparison-container">
+        <h3>Data Comparison (Before vs After Processing)</h3>
+        <div class="comparison-tables">
+            <div class="comparison-table">
+            <h4>Before Processing</h4>
+            <table class="data-table">
+                <thead>
+                <tr>
+                    ${unsortedHeaders.map(header => `<th>${header}</th>`).join('')}
+                </tr>
+                </thead>
+                <tbody>
+                ${sampleData.map(row => `
+                    <tr>
+                    ${unsortedHeaders.map(header => `<td>${row[header] || ''}</td>`).join('')}
+                    </tr>
+                `).join('')}
+                </tbody>
+            </table>
+            </div>
+            
+            <div class="comparison-table">
+            <h4>After Processing</h4>
+            <table class="data-table">
+                <thead>
+                <tr>
+                    ${processedHeaders.map(header => `<th>${header}</th>`).join('')}
+                </tr>
+                </thead>
+                <tbody>
+                ${mappedProcessed.map(row => `
+                    <tr>
+                    ${processedHeaders.map(header => `<td>${row[header] || ''}</td>`).join('')}
+                    </tr>
+                `).join('')}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        
+        <div class="processing-summary">
+            <h4>Processing Summary</h4>
+            <ul>
+            <li>Original records: ${unsortedData.length}</li>
+            <li>Processed records: ${processedData.length}</li>
+            <li>Fields standardized: ${processedHeaders.length}</li>
+            <li>Data sorted by: ${currentSortField || 'N/A'}</li>
+            </ul>
+        </div>
+        </div>
+    `;
+    
+    // Update the comparison view
+    comparisonTablePreview.innerHTML = comparisonHTML;
+    
+    // Add event listeners for table interactions if needed
+    document.querySelectorAll('.comparison-table th').forEach(header => {
+        header.addEventListener('click', () => {
+        // Implement sorting functionality for the comparison tables if needed
+        });
+    });
+    }
+        
+        function processFiles() {
+            const resetLoading = showLoading(processBtn);
+            
+            if (!unsortedData || !referenceData) {
+                showAlert('Please upload both unsorted and reference files before processing');
+                resetLoading();
+                return;
+            }
+            
+            // Example processing: Sort unsorted data based on reference data
+            processedData = unsortedData.map(unsortedRow => {
+                const referenceRow = referenceData.find(refRow => refRow.CYS === unsortedRow.CYS);
+                return { ...unsortedRow, ...referenceRow };
+            });
+            
+            // Remove duplicates based on CYS
+            const uniqueProcessedData = Array.from(new Set(processedData.map(row => row.CYS)))
+                .map(cys => processedData.find(row => row.CYS === cys));
+            
+            processedData = uniqueProcessedData;
+            
+            resetPagination('result', processedData.length);
+            displayPaginatedData('result', processedData, tablePreview);
+            
+            resultContainer.style.display = 'block';
+            resetLoading();
+        }
+        
+        function downloadSortedCSV() {
+            if (!processedData || processedData.length === 0) {
+                showAlert('No processed data available for download');
+                return;
+            }
+            
+            const csv = Papa.unparse(processedData);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'sorted_data.csv');
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
