@@ -450,7 +450,8 @@
         
         // GitHub repository reference file path
         // Note: This should be updated to the actual path in your GitHub repository
-        const githubReferenceUrl = 'reference.csv';
+        // const githubReferenceUrl = 'reference.csv';
+        const githubReferenceUrl = 'https://raw.githubusercontent.com/neinzaut/scholarship-scripts/main/reference.csv';
         
         // Event Listeners
         useRepoRadio.addEventListener('change', toggleReferenceSource);
@@ -566,7 +567,9 @@
                     
                     const link = document.createElement('a');
                     link.setAttribute('href', url);
-                    link.setAttribute('download', 'reference_template.csv');
+                    // link.setAttribute('download', 'reference_template.csv');
+                    link.setAttribute('download', 'https://raw.githubusercontent.com/neinzaut/scholarship-scripts/main/reference_template.csv');
+
                     link.style.visibility = 'hidden';
                     
                     document.body.appendChild(link);
